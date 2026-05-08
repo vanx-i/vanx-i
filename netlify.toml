@@ -7,3 +7,8 @@
 
   [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+
+  [[scheduled-functions]]
+  name = "notify-releases"
+  schedule = "0 9 * * *"
+  path = "/api/notify-releases"

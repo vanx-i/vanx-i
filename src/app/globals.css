@@ -24,3 +24,117 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FullCalendar dark theme */
+.fc {
+  --fc-border-color: rgba(255,255,255,0.08);
+  --fc-button-bg-color: #7c3aed;
+  --fc-button-border-color: #7c3aed;
+  --fc-button-hover-bg-color: #6d28d9;
+  --fc-button-hover-border-color: #6d28d9;
+  --fc-button-active-bg-color: #5b21b6;
+  --fc-today-bg-color: rgba(124,58,237,0.15);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: transparent;
+  --fc-list-event-hover-bg-color: rgba(124,58,237,0.1);
+}
+
+.fc .fc-toolbar-title {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: #a78bfa;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+}
+
+.fc .fc-daygrid-day-number {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  color: white;
+  background: #7c3aed;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fc .fc-daygrid-day:hover {
+  background: rgba(124,58,237,0.05);
+}
+
+.fc .fc-event {
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 4px;
+  border: none !important;
+}
+
+.fc .fc-daygrid-more-link {
+  color: #a78bfa;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.fc .fc-button {
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+}
+
+.fc thead {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* FullCalendar popover "ver más" */
+.fc .fc-popover {
+  background: #1a1a2e;
+  border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  overflow: hidden;
+}
+
+.fc .fc-popover-header {
+  background: rgba(124,58,237,0.2);
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  text-transform: capitalize;
+}
+
+.fc .fc-popover-close {
+  color: #a78bfa;
+  font-size: 1.2rem;
+}
+
+.fc .fc-popover-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.fc .fc-popover-body .fc-event {
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
+}
