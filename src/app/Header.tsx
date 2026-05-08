@@ -1,16 +1,33 @@
 'use client'
 
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 
 export default function Header() {
   const { isSignedIn } = useAuth()
+  const { user } = useUser()
 
   return (
     <header className="flex justify-end items-center px-6 py-4 gap-4 bg-gray-950 border-b border-gray-800">
-      <span className="text-purple-400 font-bold text-lg mr-auto">vanx-i</span>
-      {!isSignedIn ? (
+      <a href="/" className="flex items-center gap-2 mr-auto hover:opacity-80 transition-opacity">
+        <img src="/icon-192.png" alt="vanx-i" className="w-8 h-8 rounded-lg" />
+        <span className="text-purple-400 font-bold text-lg">vanx-i</span>
+      </a>
+      {isSignedIn ? (
+        <div className="flex items-center gap-4">
+          <a href="/calendar" className="text-gray-400 hover:text-white transition-colors text-sm">
+            Calendario
+          </a>
+          <a href="/profile" className="text-gray-400 hover:text-white transition-colors text-sm">
+            Mi perfil
+          </a>
+          <UserButton />
+        </div>
+      ) : (
         <>
+          <a href="/calendar" className="text-gray-400 hover:text-white transition-colors text-sm">
+            Calendario
+          </a>
           <SignInButton mode="modal">
             <button className="text-gray-400 hover:text-white transition-colors text-sm">
               Iniciar sesión
@@ -22,8 +39,6 @@ export default function Header() {
             </button>
           </SignUpButton>
         </>
-      ) : (
-        <UserButton />
       )}
     </header>
   )

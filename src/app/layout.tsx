@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'vanx-i | Calendario de videojuegos',
   description: 'Tu calendario personalizado de lanzamientos de videojuegos',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'vanx-i',
+  },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
