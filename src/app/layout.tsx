@@ -40,6 +40,17 @@ export default function RootLayout({
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <Header />
           {children}
+          {/* Buy Me a Coffee */}
+          
+            <a href="https://www.buymeacoffee.com/vanxi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed bottom-6 right-6 z-50 hover:scale-105 transition-transform shadow-2xl shadow-black/50 rounded-xl overflow-hidden">
+            <img
+              src="https://img.buymeacoffee.com/button-api/?text=Mantén vanx-i vivo&emoji=&slug=vanxi&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff"
+              alt="Buy Me A Coffee"
+            />
+          </a>
         </body>
       </html>
     </ClerkProvider>
