@@ -26,7 +26,10 @@ export default function ProfilePage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const [interestedGames, setInterestedGames] = useState<Game[]>([])
+  const [removingGame, setRemovingGame] = useState<number | null>(null)
+  const [hiddenGames, setHiddenGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
+  const [showHidden, setShowHidden] = useState(false)
 
   useEffect(() => {
     if (isLoaded && !user) router.push('/')
@@ -34,20 +37,52 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user) return
-    fetch('/api/user-games/list')
-      .then(res => res.json())
-      .then(data => {
-        setInterestedGames(data)
-        setLoading(false)
-      })
+    Promise.all([
+      fetch('/api/user-games/list').then(res => res.json()),
+      fetch('/api/user-games/hidden').then(res => res.json())
+    ]).then(([interested, hidden]) => {
+      setInterestedGames(interested)
+      setHiddenGames(hidden)
+      setLoading(false)
+    })
   }, [user])
+
+  const restoreGame = async (gameId: number) => {
+    await fetch('/api/user-games', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId, restore: true })
+    })
+    setHiddenGames(prev => prev.filter(g => g.id !== gameId))
+  }
+
+  const removeInterest = async (gameId: number) => {
+  setRemovingGame(gameId)
+  try {
+    await fetch('/api/user-games', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId, userEmail: user?.primaryEmailAddress?.emailAddress, userName: user?.fullName })
+    })
+    setInterestedGames(prev => prev.filter(g => g.id !== gameId))
+  } finally {
+    setRemovingGame(null)
+  }
+}
 
   if (!isLoaded || !user) return null
 
-  const nextGame = interestedGames[0]
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const nextGame = interestedGames.find(g => {
+    const releaseDate = new Date(g.release_date)
+    releaseDate.setHours(0, 0, 0, 0)
+    return releaseDate >= today
+  }) || interestedGames[0]
   const daysUntilNext = nextGame
     ? Math.ceil((new Date(nextGame.release_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null
+  const isReleased = daysUntilNext !== null && daysUntilNext <= 0
 
   return (
     <main className="min-h-screen text-white" style={{backgroundColor: '#0a0a1a'}}>
@@ -61,16 +96,15 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto px-4 -mt-16 relative z-10 pb-24">
 
         {/* AVATAR Y DATOS */}
-        <div className="flex items-end gap-6 mb-8">
+        <div className="flex flex-col items-center text-center mb-8">
           <img
             src={user.imageUrl}
             alt={user.fullName || ''}
-            className="w-24 h-24 rounded-2xl shadow-2xl shadow-purple-500/30 border-4 border-[#0a0a1a]"
+            className="w-28 h-28 rounded-2xl shadow-2xl shadow-purple-500/30 border-4 border-[#0a0a1a] mb-4"
           />
-          <div className="pb-2">
-            <h1 className="text-3xl font-black text-white">{user.fullName || user.username}</h1>
-            <p className="text-gray-400 text-sm">{user.primaryEmailAddress?.emailAddress}</p>
-          </div>
+          <h1 className="text-3xl font-black text-white">
+            {user.fullName || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0]}
+          </h1>
         </div>
 
         {/* STATS */}
@@ -81,9 +115,11 @@ export default function ProfilePage() {
           </div>
           <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 text-center">
             <p className="text-3xl font-black text-cyan-400">
-              {daysUntilNext !== null ? (daysUntilNext <= 0 ? '¡Hoy!' : daysUntilNext) : '-'}
+              {daysUntilNext === 0 ? '🎮' : daysUntilNext !== null ? (daysUntilNext < 0 ? `${Math.abs(daysUntilNext)}` : daysUntilNext) : '-'}
             </p>
-            <p className="text-gray-400 text-xs mt-1">Días hasta el próximo</p>
+            <p className="text-gray-400 text-xs mt-1">
+              {daysUntilNext === 0 ? '¡Sale hoy!' : daysUntilNext !== null && daysUntilNext < 0 ? 'Días desde el último' : 'Días hasta el próximo'}
+            </p>
           </div>
           <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 text-center">
             <p className="text-3xl font-black text-pink-400">
@@ -106,14 +142,18 @@ export default function ProfilePage() {
               <div className="w-16 h-20 bg-purple-900/50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">🎮</div>
             )}
             <div>
-              <p className="text-purple-400 text-xs font-bold mb-1">PRÓXIMO LANZAMIENTO</p>
+              <p className="text-purple-400 text-xs font-bold mb-1">
+                {isReleased ? 'ÚLTIMO LANZAMIENTO' : 'PRÓXIMO LANZAMIENTO'}
+              </p>
               <h3 className="text-xl font-black text-white">{nextGame.name}</h3>
               <p className="text-gray-400 text-sm mt-1">
                 📅 {new Date(nextGame.release_date).toLocaleDateString('es-ES', {
                   day: 'numeric', month: 'long', year: 'numeric'
                 })}
-                {daysUntilNext !== null && daysUntilNext > 0 && (
-                  <span className="text-cyan-400 ml-2">· en {daysUntilNext} días</span>
+                {daysUntilNext !== null && (
+                  <span className="text-cyan-400 ml-2">
+                    {daysUntilNext > 0 ? `· en ${daysUntilNext} días` : daysUntilNext === 0 ? '· ¡hoy!' : `· hace ${Math.abs(daysUntilNext)} días`}
+                  </span>
                 )}
               </p>
             </div>
@@ -156,6 +196,15 @@ export default function ProfilePage() {
                       🔥
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => removeInterest(game.id)}
+                      disabled={removingGame === game.id}
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-xl text-white text-xs font-bold transition-colors"
+                    >
+                      {removingGame === game.id ? '...' : '💔 Quitar'}
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-2 px-1">
                   <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{game.name}</p>
@@ -172,6 +221,42 @@ export default function ProfilePage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {/* JUEGOS OCULTOS */}
+        {hiddenGames.length > 0 && (
+          <div className="mt-12">
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors text-sm font-medium mb-4"
+            >
+              {showHidden ? '▲' : '▼'} Juegos ocultos ({hiddenGames.length})
+            </button>
+
+            {showHidden && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {hiddenGames.map(game => (
+                  <div key={game.id} className="group cursor-pointer opacity-50 hover:opacity-100 transition-opacity">
+                    <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-gray-900 border border-gray-800 group-hover:border-cyan-500/50 transition-all">
+                      {game.cover_url ? (
+                        <img src={`https:${game.cover_url}`} alt={game.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-purple-900/50 to-cyan-900/50">🎮</div>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => restoreGame(game.id)}
+                          className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-white text-xs font-bold transition-colors"
+                        >
+                          Restaurar
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-gray-500 text-xs mt-2 line-clamp-2 px-1">{game.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

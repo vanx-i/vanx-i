@@ -6,10 +6,11 @@ export async function GET() {
     const games = await sql`
       SELECT 
         id, name, category, platforms, release_date,
-        cover_url, summary, hypes, follows, rating, rating_count, interest_count
+        cover_url, summary, hypes, follows, rating, rating_count
       FROM games
-      WHERE DATE(release_date) >= CURRENT_DATE
-      ORDER BY release_date ASC, interest_count DESC, hypes DESC, follows DESC
+      WHERE DATE(release_date) >= CURRENT_DATE - INTERVAL '30 days'
+        AND DATE(release_date) < CURRENT_DATE
+      ORDER BY release_date DESC, hypes DESC
     `
     return NextResponse.json(games, {
       headers: {
@@ -17,7 +18,7 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error('Error obteniendo juegos:', error)
-    return NextResponse.json({ error: 'Error obteniendo juegos' }, { status: 500 })
+    console.error('Error obteniendo juegos recientes:', error)
+    return NextResponse.json({ error: 'Error' }, { status: 500 })
   }
 }

@@ -17,9 +17,29 @@ interface Game {
   follows: number
   rating: number
   rating_count: number
+  interest_count: number
 }
 
 const PLATFORMS = ['PC (Microsoft Windows)', 'PlayStation 5', 'Nintendo Switch', 'Xbox Series X|S', 'Xbox One']
+const CATEGORY_MAP: Record<string, string> = {
+  'Racing': 'Carreras',
+  'Puzzle': 'Puzzle',
+  'Adventure': 'Aventura',
+  'Role-playing (RPG)': 'RPG',
+  'Shooter': 'Shooter',
+  'Sport': 'Deportes',
+  'Strategy': 'Estrategia',
+  'Simulator': 'Simulación',
+  'Fighting': 'Lucha',
+  'Platform': 'Plataformas',
+  'Arcade': 'Arcade',
+  'Indie': 'Indie',
+  'Action': 'Acción',
+  'Horror': 'Terror',
+  'Music': 'Música',
+}
+
+const CATEGORIES = [...new Set(Object.values(CATEGORY_MAP))]
 
 const platformLabels: Record<string, string> = {
   'PC (Microsoft Windows)': 'PC',
@@ -41,10 +61,16 @@ export default function CalendarPage() {
   const [games, setGames] = useState<Game[]>([])
   const [selectedGame, setSelectedGame] = useState<Game | null>(null)
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [recentGames, setRecentGames] = useState<Game[]>([])
+  const [showRecent, setShowRecent] = useState(false)
+  const [search, setSearch] = useState('')
+  const [next7Days, setNext7Days] = useState(false)
   const [view, setView] = useState<'calendar' | 'list'>('list')
   const { user } = useUser()
   const [interestedGames, setInterestedGames] = useState<number[]>([])
+  const [hiddenGames, setHiddenGames] = useState<number[]>([])
   const [loadingInterest, setLoadingInterest] = useState(false)
 
 useEffect(() => {
@@ -76,13 +102,31 @@ const toggleInterest = async (gameId: number) => {
     setLoadingInterest(false)
   }
 }
+
+const hideGame = async (gameId: number) => {
+  if (!user) return
+  try {
+    await fetch('/api/user-games', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId })
+    })
+    setHiddenGames(prev => [...prev, gameId])
+    setSelectedGame(null)
+  } catch (error) {
+    console.error(error)
+  }
+}
+
   useEffect(() => {
-    fetch('/api/games')
-      .then(res => res.json())
-      .then(data => {
-        setGames(data)
-        setLoading(false)
-      })
+    Promise.all([
+      fetch('/api/games').then(res => res.json()),
+      fetch('/api/games/recent').then(res => res.json())
+    ]).then(([upcoming, recent]) => {
+      setGames(upcoming)
+      setRecentGames(recent)
+      setLoading(false)
+    })
   }, [])
 
   const togglePlatform = (platform: string) => {
@@ -93,11 +137,35 @@ const toggleInterest = async (gameId: number) => {
     )
   }
 
-  const filteredGames = selectedPlatforms.length === 0
-    ? games
-    : games.filter(game =>
-        game.platforms?.some(p => selectedPlatforms.includes(p))
-      )
+  const filteredGames = games
+    .filter(game => !hiddenGames.includes(game.id))
+    .filter(game =>
+      selectedPlatforms.length === 0
+        ? true
+        : game.platforms?.some(p => selectedPlatforms.includes(p))
+    )
+    .filter(game =>
+      search === ''
+        ? true
+        : game.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter(game =>
+      selectedCategories.length === 0
+        ? true
+        : selectedCategories.some(c => {
+            const englishCategory = Object.keys(CATEGORY_MAP).find(k => CATEGORY_MAP[k] === c)
+            return game.category?.toLowerCase() === englishCategory?.toLowerCase()
+          })
+    )
+    .filter(game => {
+      if (!next7Days) return true
+      const releaseDate = new Date(game.release_date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const in7Days = new Date()
+      in7Days.setDate(in7Days.getDate() + 7)
+      return releaseDate >= today && releaseDate <= in7Days
+    })
 
   const events = [...filteredGames]
     .sort((a, b) => b.hypes - a.hypes)
@@ -137,8 +205,27 @@ const toggleInterest = async (gameId: number) => {
 
       <div className="max-w-6xl mx-auto px-4 pb-24">
 
-        {/* CONTROLES */}
+          {/* CONTROLES */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
+
+          {/* Búsqueda */}
+          <div className="relative w-full mb-2">
+            <input
+              type="text"
+              placeholder="Buscar juego..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-800 focus:border-purple-500 rounded-xl text-white placeholder-gray-500 outline-none transition-colors"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
           {/* Filtros plataforma */}
           <div className="flex flex-wrap gap-2 flex-1">
@@ -163,6 +250,49 @@ const toggleInterest = async (gameId: number) => {
                 Limpiar ✕
               </button>
             )}
+          </div>
+
+            {/* Filtros categoría */}
+          <div className="flex flex-wrap gap-2 w-full mt-2">
+            {CATEGORIES.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategories(prev =>
+                  prev.includes(category)
+                    ? prev.filter(c => c !== category)
+                    : [...prev, category]
+                )}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  selectedCategories.includes(category)
+                    ? 'bg-cyan-600 text-white scale-105'
+                    : 'bg-gray-800 text-gray-500 hover:bg-gray-700 hover:text-gray-300'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+            {selectedCategories.length > 0 && (
+              <button
+                onClick={() => setSelectedCategories([])}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-gray-900 text-gray-500 hover:text-white transition-colors"
+              >
+                Limpiar ✕
+              </button>
+            )}
+          </div>
+
+          {/* Próximos 7 días */}
+          <div className="flex gap-2 w-full mt-2">
+            <button
+              onClick={() => setNext7Days(!next7Days)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                next7Days
+                  ? 'bg-cyan-600 text-white scale-105'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              🗓️ Próximos 7 días
+            </button>
           </div>
 
           {/* Toggle vista */}
@@ -257,6 +387,55 @@ const toggleInterest = async (gameId: number) => {
             ))}
           </div>
         )}
+        {/* YA SALIÓ */}
+        {recentGames.length > 0 && (
+          <div className="mt-16">
+            <button
+              onClick={() => setShowRecent(!showRecent)}
+              className="flex items-center gap-3 mb-6 group"
+            >
+              <h2 className="text-2xl font-black border-l-4 border-cyan-500 pl-4 text-white group-hover:text-cyan-400 transition-colors">
+                Ya salió <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">— últimos 30 días</span>
+              </h2>
+              <span className="text-gray-500 text-sm">{showRecent ? '▲' : '▼'}</span>
+            </button>
+
+            {showRecent && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {recentGames.map(game => (
+                  <div
+                    key={game.id}
+                    onClick={() => setSelectedGame(game)}
+                    className="group cursor-pointer"
+                  >
+                    <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-gray-900 border border-gray-800 group-hover:border-cyan-500/50 transition-all group-hover:scale-105">
+                      {game.cover_url ? (
+                        <img
+                          src={`https:${game.cover_url}`}
+                          alt={game.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-cyan-900/50 to-purple-900/50">
+                          🎮
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-2 bg-cyan-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        YA SALIÓ
+                      </div>
+                    </div>
+                    <div className="mt-2 px-1">
+                      <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{game.name}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">
+                        {new Date(game.release_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MODAL */}
@@ -266,15 +445,15 @@ const toggleInterest = async (gameId: number) => {
           onClick={() => setSelectedGame(null)}
         >
           <div
-            className="bg-gray-900 border border-gray-700 rounded-3xl p-6 max-w-md w-full shadow-2xl"
+            className="bg-gray-900 border border-gray-700 rounded-3xl p-6 w-full max-w-md sm:max-w-xl md:max-w-2xl shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex gap-4 mb-4">
+            <div className="flex gap-6 mb-4">
               {selectedGame.cover_url ? (
                 <img
                   src={`https:${selectedGame.cover_url}`}
                   alt={selectedGame.name}
-                  className="w-24 h-32 object-cover rounded-xl flex-shrink-0"
+                  className="w-32 h-44 md:w-40 md:h-56 object-cover rounded-xl flex-shrink-0"
                 />
               ) : (
                 <div className="w-24 h-32 bg-gradient-to-br from-purple-900/50 to-cyan-900/50 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
@@ -292,9 +471,9 @@ const toggleInterest = async (gameId: number) => {
                     day: 'numeric', month: 'long', year: 'numeric'
                   })}
                 </p>
-                {selectedGame.follows > 0 && (
-                  <p className="text-gray-400 text-sm mt-1">👥 {selectedGame.follows} siguiendo</p>
-                )}
+                {selectedGame.interest_count > 0 && (
+                <p className="text-purple-300 text-sm mt-1 font-medium">💜 {selectedGame.interest_count} {selectedGame.interest_count === 1 ? 'persona espera' : 'personas esperan'} este juego</p>
+              )}
               </div>
             </div>
 
@@ -314,17 +493,38 @@ const toggleInterest = async (gameId: number) => {
 
             <div className="flex gap-3">
               {user ? (
-                <button
-                  onClick={() => toggleInterest(selectedGame.id)}
-                  disabled={loadingInterest}
-                  className={`flex-1 py-2.5 rounded-xl transition-all text-sm font-bold ${
-                    interestedGames.includes(selectedGame.id)
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                      : 'bg-gray-800 hover:bg-purple-600 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  {interestedGames.includes(selectedGame.id) ? '💜 Me interesa' : '🤍 Me interesa'}
-                </button>
+                <>
+                  <button
+                    onClick={() => toggleInterest(selectedGame.id)}
+                    disabled={loadingInterest}
+                    className={`flex-1 py-2.5 rounded-xl transition-all text-sm font-bold ${
+                      interestedGames.includes(selectedGame.id)
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : 'bg-gray-800 hover:bg-purple-600 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    {interestedGames.includes(selectedGame.id) ? '💜 Me interesa' : '🤍 Me interesa'}
+                  </button>
+                  <button
+                    onClick={() => hideGame(selectedGame.id)}
+                    className="px-4 py-2.5 bg-gray-800 hover:bg-red-900/50 hover:text-red-400 rounded-xl transition-all text-sm font-medium text-gray-500"
+                    title="No me interesa"
+                  >
+                    👎
+                  </button>
+                  <button
+                onClick={() => {
+                  const url = `https://vanx-i.netlify.app/game/${selectedGame.id}`
+                  const text = `🎮 ¡Echa un ojo a este juego!\n${selectedGame.name} · Sale el ${new Date(selectedGame.release_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}\n👉 ${url}`
+                  navigator.clipboard.writeText(text)
+                  alert('¡Copiado al portapapeles!')
+                }}
+                className="px-4 py-2.5 bg-gray-800 hover:bg-cyan-600 hover:text-white rounded-xl transition-all text-sm font-medium text-gray-400"
+                title="Compartir"
+              >
+                🔗
+              </button>
+                </>
               ) : (
                 <div className="flex-1 py-2.5 rounded-xl bg-gray-800/50 text-gray-500 text-sm text-center">
                   Inicia sesión para marcar favoritos

@@ -35,3 +35,29 @@ export async function getUpcomingGames() {
   const games = await response.json()
   return games
 }
+
+export async function getRecentGames() {
+  const token = await getTwitchToken()
+  const now = Math.floor(Date.now() / 1000)
+  const thirtyDaysAgo = now - 60 * 60 * 24 * 30
+
+  const response = await fetch(`${IGDB_URL}/games`, {
+    method: 'POST',
+    headers: {
+      'Client-ID': process.env.TWITCH_CLIENT_ID!,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: `
+      fields name, summary, cover.url, first_release_date, genres.name, platforms.name, hypes, follows, rating, rating_count;
+      where first_release_date >= ${thirtyDaysAgo}
+        & first_release_date < ${now}
+        & platforms = (6,48,49,130,167,169);
+      sort first_release_date desc;
+      limit 100;
+    `
+  })
+
+  const games = await response.json()
+  return games
+}

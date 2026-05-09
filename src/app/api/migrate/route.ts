@@ -7,6 +7,8 @@ export async function GET() {
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS follows INTEGER DEFAULT 0`
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS rating NUMERIC(4,1) DEFAULT 0`
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0`
+    await sql`ALTER TABLE user_games ADD COLUMN IF NOT EXISTS notify_days_before INTEGER DEFAULT 3`
+    await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS interest_count INTEGER DEFAULT 0`
     return NextResponse.json({ message: 'Migración completada correctamente' })
   } catch (error) {
     if (error instanceof Error) {
