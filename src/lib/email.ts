@@ -9,17 +9,19 @@ export async function sendGameReleaseEmail(
   gameName: string,
   gameDate: string,
   coverUrl: string | null,
-  category: string
+  category: string,
+  gameId: number
 ) {
   await resend.emails.send({
-    from: 'vanx-i <onboarding@resend.dev>',
+    from: 'vanx-i <hola@vanx-i.app>',
     to: userEmail,
     subject: `🎮 ¡Hoy sale ${gameName}!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #0a0a1a; color: white; border-radius: 16px; overflow: hidden;">
         
         <div style="background: linear-gradient(135deg, #7c3aed, #06b6d4); padding: 32px; text-align: center;">
-          <h1 style="margin: 0; font-size: 28px; color: white;">🎮 vanx-i</h1>
+          <img src="https://vanx-i.app/icon-192.png" alt="vanx-i" style="width: 64px; height: 64px; border-radius: 16px; margin-bottom: 12px;" />
+          <h1 style="margin: 0; font-size: 28px; color: white;">vanx-i</h1>
           <p style="margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Tu calendario de lanzamientos</p>
         </div>
 
@@ -45,10 +47,10 @@ export async function sendGameReleaseEmail(
           </p>
 
           <a 
-            href="https://vanx-i.netlify.app/calendar"
+            href="https://vanx-i.app/game/${gameId}"
             style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #06b6d4); color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; margin-top: 16px;"
           >
-            Ver calendario →
+            Ver juego →
           </a>
         </div>
 
@@ -68,17 +70,19 @@ export async function sendGameReminderEmail(
   gameDate: string,
   coverUrl: string | null,
   category: string,
-  daysLeft: number
+  daysLeft: number,
+  gameId: number
 ) {
   await resend.emails.send({
-    from: 'vanx-i <onboarding@resend.dev>',
+    from: 'vanx-i <hola@vanx-i.app>',
     to: userEmail,
     subject: `🎮 ${gameName} sale en ${daysLeft} días!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #0a0a1a; color: white; border-radius: 16px; overflow: hidden;">
         
         <div style="background: linear-gradient(135deg, #7c3aed, #06b6d4); padding: 32px; text-align: center;">
-          <h1 style="margin: 0; font-size: 28px; color: white;">🎮 vanx-i</h1>
+          <img src="https://vanx-i.app/icon-192.png" alt="vanx-i" style="width: 64px; height: 64px; border-radius: 16px; margin-bottom: 12px;" />
+          <h1 style="margin: 0; font-size: 28px; color: white;">vanx-i</h1>
           <p style="margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Tu calendario de lanzamientos</p>
         </div>
 
@@ -104,10 +108,10 @@ export async function sendGameReminderEmail(
           </p>
 
           <a 
-            href="https://vanx-i.netlify.app/calendar"
+            href="https://vanx-i.app/game/${gameId}"
             style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #06b6d4); color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; margin-top: 16px;"
           >
-            Ver calendario →
+            Ver juego →
           </a>
         </div>
 

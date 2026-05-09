@@ -10,8 +10,9 @@ const platformLabels: Record<string, string> = {
   'Xbox One': 'Xbox One'
 }
 
-export default async function GamePage({ params }: { params: { id: string } }) {
-  const games = await sql`SELECT * FROM games WHERE id = ${params.id}`
+export default async function GamePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const games = await sql`SELECT * FROM games WHERE id = ${id}`
 
   if (games.length === 0) notFound()
 

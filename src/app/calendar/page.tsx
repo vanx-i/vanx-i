@@ -67,6 +67,8 @@ export default function CalendarPage() {
   const [showRecent, setShowRecent] = useState(false)
   const [search, setSearch] = useState('')
   const [next7Days, setNext7Days] = useState(false)
+  const [onlyHype, setOnlyHype] = useState(false)
+  const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [view, setView] = useState<'calendar' | 'list'>('list')
   const { user } = useUser()
   const [interestedGames, setInterestedGames] = useState<number[]>([])
@@ -167,12 +169,23 @@ const hideGame = async (gameId: number) => {
       return releaseDate >= today && releaseDate <= in7Days
     })
 
+    .filter(game => {
+      if (!onlyHype) return true
+      return game.hypes > 0
+    })
+
+    .filter(game => {
+      if (!onlyFavorites) return true
+      return interestedGames.includes(game.id)
+    })
+
   const events = [...filteredGames]
-    .sort((a, b) => b.hypes - a.hypes)
-    .map(game => ({
+    .sort((a, b) => (b.interest_count || 0) - (a.interest_count || 0))
+    .map((game, index) => ({
       id: String(game.id),
       title: game.name,
       date: game.release_date,
+      order: -(game.interest_count || 0),
       backgroundColor: game.hypes > 5 ? '#7c3aed' : game.hypes > 1 ? '#0e7490' : '#374151',
       borderColor: game.hypes > 5 ? '#7c3aed' : game.hypes > 1 ? '#0e7490' : '#374151',
       extendedProps: { game }
@@ -281,8 +294,8 @@ const hideGame = async (gameId: number) => {
             )}
           </div>
 
-          {/* Próximos 7 días */}
-          <div className="flex gap-2 w-full mt-2">
+          {/* Filtros rápidos */}
+          <div className="flex gap-2 w-full mt-2 flex-wrap">
             <button
               onClick={() => setNext7Days(!next7Days)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
@@ -293,7 +306,28 @@ const hideGame = async (gameId: number) => {
             >
               🗓️ Próximos 7 días
             </button>
+            <button
+              onClick={() => setOnlyHype(!onlyHype)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                onlyHype
+                  ? 'bg-orange-600 text-white scale-105'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              🔥 Solo con hype
+            </button>
+            <button
+              onClick={() => setOnlyFavorites(!onlyFavorites)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                onlyFavorites
+                  ? 'bg-purple-600 text-white scale-105'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              🤍 Mis favoritos
+            </button>
           </div>
+          
 
           {/* Toggle vista */}
           <div className="flex bg-gray-900 rounded-xl p-1 border border-gray-800">
@@ -368,6 +402,11 @@ const hideGame = async (gameId: number) => {
                         {game.hypes > 5 && (
                           <div className="absolute top-2 right-2 bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                             🔥 HOT
+                          </div>
+                        )}
+                        {interestedGames.includes(game.id) && (
+                          <div className="absolute top-2 left-2 bg-purple-600/80 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            🤍
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
@@ -503,7 +542,7 @@ const hideGame = async (gameId: number) => {
                         : 'bg-gray-800 hover:bg-purple-600 text-gray-300 hover:text-white'
                     }`}
                   >
-                    {interestedGames.includes(selectedGame.id) ? '💜 Me interesa' : '🤍 Me interesa'}
+                    {interestedGames.includes(selectedGame.id) ? '🤍 Me interesa' : '🖤 Me interesa'}
                   </button>
                   <button
                     onClick={() => hideGame(selectedGame.id)}
@@ -514,7 +553,7 @@ const hideGame = async (gameId: number) => {
                   </button>
                   <button
                 onClick={() => {
-                  const url = `https://vanx-i.netlify.app/game/${selectedGame.id}`
+                  const url = `https://vanx-i.app/game/${selectedGame.id}`
                   const text = `🎮 ¡Echa un ojo a este juego!\n${selectedGame.name} · Sale el ${new Date(selectedGame.release_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}\n👉 ${url}`
                   navigator.clipboard.writeText(text)
                   alert('¡Copiado al portapapeles!')

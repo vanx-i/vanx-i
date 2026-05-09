@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const today = new Date().toISOString().split('T')[0]
 
-    // Juegos que salen HOY
     const releases = await sql`
       SELECT 
         g.id as game_id,
@@ -25,7 +24,6 @@ export async function GET() {
         AND ug.status = 'interested'
     `
 
-    // Juegos próximos según días de antelación
     const reminders = await sql`
       SELECT 
         g.id as game_id,
@@ -57,7 +55,8 @@ export async function GET() {
             day: 'numeric', month: 'long', year: 'numeric'
           }),
           release.cover_url,
-          release.category
+          release.category,
+          release.game_id
         )
         await sql`UPDATE user_games SET notified = true WHERE id = ${release.user_game_id}`
         notified++
@@ -77,7 +76,8 @@ export async function GET() {
           }),
           reminder.cover_url,
           reminder.category,
-          reminder.notify_days_before
+          reminder.notify_days_before,
+          reminder.game_id
         )
         notified++
       } catch (emailError) {
