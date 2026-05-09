@@ -125,7 +125,7 @@ export default function ProfilePage() {
             <p className="text-3xl font-black text-pink-400">
               {interestedGames.filter(g => g.hypes > 5).length}
             </p>
-            <p className="text-gray-400 text-xs mt-1">🔥 AAA esperados</p>
+            <p className="text-gray-400 text-xs mt-1">🔥 Muy esperados</p>
           </div>
         </div>
 

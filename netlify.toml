@@ -5,10 +5,30 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-  [build.environment]
+[build.environment]
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
 
-  [[scheduled-functions]]
+[[scheduled-functions]]
   name = "notify-releases"
   schedule = "0 9 * * *"
   path = "/api/notify-releases"
+
+[[scheduled-functions]]
+  name = "sync-games"
+  schedule = "0 3 * * *"
+  path = "/api/sync-games"
+
+[[headers]]
+for = "/*"
+[headers.values]
+  X-Frame-Options = "DENY"
+  X-XSS-Protection = "1; mode=block"
+  X-Content-Type-Options = "nosniff"
+  Referrer-Policy = "strict-origin-when-cross-origin"
+  Content-Security-Policy = "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'"
+
+  [[redirects]]
+  from = "https://vanx-i.netlify.app/*"
+  to = "https://vanx-i.app/:splat"
+  status = 301
+  force = true
