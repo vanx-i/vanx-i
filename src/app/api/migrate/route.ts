@@ -9,6 +9,10 @@ export async function GET() {
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0`
     await sql`ALTER TABLE user_games ADD COLUMN IF NOT EXISTS notify_days_before INTEGER DEFAULT 3`
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS interest_count INTEGER DEFAULT 0`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50) UNIQUE`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_profile BOOLEAN DEFAULT true`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`
     await sql`
       CREATE TABLE IF NOT EXISTS announcements (
         id SERIAL PRIMARY KEY,

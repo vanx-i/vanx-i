@@ -75,7 +75,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {topGames.map((game, index) => (
-              <a href="/calendar" key={game.id} className="group cursor-pointer">
+              <a href={`/game/${game.id}`} key={game.id} className="group cursor-pointer">
                 <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-gray-900 border border-gray-800 group-hover:border-purple-500/50 transition-all group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-purple-500/20">
                   {game.cover_url ? (
                     <img src={`https:${game.cover_url}`} alt={game.name} className="w-full h-full object-cover" />

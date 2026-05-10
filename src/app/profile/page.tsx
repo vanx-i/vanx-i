@@ -30,10 +30,30 @@ export default function ProfilePage() {
   const [hiddenGames, setHiddenGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
   const [showHidden, setShowHidden] = useState(false)
+  const [username, setUsername] = useState('')
+  const [bio, setBio] = useState('')
+  const [publicProfile, setPublicProfile] = useState(true)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [profileSaved, setProfileSaved] = useState('')
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     if (isLoaded && !user) router.push('/')
   }, [isLoaded, user, router])
+
+  useEffect(() => {
+  if (!user) return
+  fetch('/api/profile')
+    .then(res => res.json())
+    .then(data => {
+      if (data) {
+        setUsername(data.username || '')
+        setBio(data.bio || '')
+        setPublicProfile(data.public_profile ?? true)
+      }
+    })
+}, [user])
 
   useEffect(() => {
     if (!user) return
@@ -47,6 +67,24 @@ export default function ProfilePage() {
     })
   }, [user])
 
+  const saveProfile = async () => {
+  setSavingProfile(true)
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, bio, publicProfile, avatarUrl: user?.imageUrl })
+    })
+    const data = await res.json()
+    if (data.error) {
+      setProfileSaved('❌ ' + data.error)
+    } else {
+      setProfileSaved('✅ Perfil guardado')
+    }
+  } finally {
+    setSavingProfile(false)
+  }
+}
   const restoreGame = async (gameId: number) => {
     await fetch('/api/user-games', {
       method: 'DELETE',
@@ -105,6 +143,27 @@ export default function ProfilePage() {
           <h1 className="text-3xl font-black text-white">
             {user.fullName || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0]}
           </h1>
+          {username && <p className="text-gray-500 text-sm mt-1">@{username}</p>}
+          {bio && <p className="text-gray-400 text-sm mt-2 max-w-sm">{bio}</p>}
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm font-medium transition-colors"
+            >
+              ✏️ Editar perfil
+            </button>
+            {username && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://vanx-i.app/user/${username}`)
+                  alert('¡Link copiado!')
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl text-sm font-medium transition-colors"
+              >
+                📤 Compartir perfil
+              </button>
+            )}
+          </div>
         </div>
 
         {/* STATS */}
@@ -223,6 +282,7 @@ export default function ProfilePage() {
             ))}
           </div>
         )}
+
         {/* JUEGOS OCULTOS */}
         {hiddenGames.length > 0 && (
           <div className="mt-12">
@@ -260,6 +320,77 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+      {/* MODAL EDITAR PERFIL */}
+      {showEditModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div
+            className="bg-gray-900 border border-gray-700 rounded-3xl p-6 w-full max-w-md shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-black text-white mb-6">✏️ Editar perfil</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-gray-300 text-sm font-medium mb-1 block">Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="ej: ianvxanten"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 focus:border-purple-500 rounded-xl text-white placeholder-gray-500 outline-none transition-colors text-sm"
+                />
+                <p className="text-gray-600 text-xs mt-1">vanx-i.app/user/{username || 'tu_username'}</p>
+              </div>
+
+              <div>
+                <label className="text-gray-300 text-sm font-medium mb-1 block">Bio</label>
+                <textarea
+                  value={bio}
+                  onChange={e => setBio(e.target.value)}
+                  placeholder="Cuéntanos algo sobre ti..."
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 focus:border-purple-500 rounded-xl text-white placeholder-gray-500 outline-none transition-colors text-sm resize-none h-20"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="publicProfile"
+                  checked={publicProfile}
+                  onChange={e => setPublicProfile(e.target.checked)}
+                  className="w-4 h-4 accent-purple-600"
+                />
+                <label htmlFor="publicProfile" className="text-gray-300 text-sm cursor-pointer">
+                  Perfil público
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={async () => {
+                  await saveProfile()
+                  setShowEditModal(false)
+                }}
+                disabled={savingProfile}
+                className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-xl text-sm font-bold transition-colors"
+              >
+                {savingProfile ? 'Guardando...' : 'Guardar'}
+              </button>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+            {profileSaved && <p className="text-sm mt-3 text-center">{profileSaved}</p>}
+          </div>
+        </div>
+      )}
     </main>
   )
 }

@@ -9,12 +9,12 @@ export async function GET() {
         cover_url, hypes, interest_count
       FROM games
       WHERE DATE(release_date) >= CURRENT_DATE
-      ORDER BY interest_count DESC, hypes DESC
+      ORDER BY GREATEST(interest_count, hypes) DESC
       LIMIT 5
     `
     return NextResponse.json(games, {
       headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        'Cache-Control': 'no-store',
       }
     })
   } catch (error) {
