@@ -9,6 +9,14 @@ export async function GET() {
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0`
     await sql`ALTER TABLE user_games ADD COLUMN IF NOT EXISTS notify_days_before INTEGER DEFAULT 3`
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS interest_count INTEGER DEFAULT 0`
+    await sql`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        message TEXT NOT NULL,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `
     return NextResponse.json({ message: 'Migración completada correctamente' })
   } catch (error) {
     if (error instanceof Error) {

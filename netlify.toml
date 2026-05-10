@@ -10,12 +10,12 @@
 
 [[scheduled-functions]]
   name = "notify-releases"
-  schedule = "0 9 * * *"
+  schedule = "0 7 * * *"
   path = "/api/notify-releases"
 
 [[scheduled-functions]]
   name = "sync-games"
-  schedule = "0 3 * * *"
+  schedule = "0 1 * * *"
   path = "/api/sync-games"
 
 [[headers]]

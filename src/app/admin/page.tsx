@@ -27,6 +27,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
+  const [bannerMessage, setBannerMessage] = useState('')
+  const [bannerActive, setBannerActive] = useState(false)
+  const [bannerSaved, setBannerSaved] = useState('')
 
   useEffect(() => {
     if (!isLoaded) return
@@ -173,7 +176,48 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
-
+            {/* BANNER DE NOVEDADES */}
+        <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 mt-10">
+          <h2 className="text-xl font-black mb-4 border-l-4 border-cyan-500 pl-4">📢 Banner de novedades</h2>
+          <p className="text-gray-400 text-sm mb-4">Escribe un mensaje y actívalo para que aparezca en la web. Desactívalo cuando quieras.</p>
+          <textarea
+            value={bannerMessage}
+            onChange={e => setBannerMessage(e.target.value)}
+            placeholder="Ej: ¡Nueva feature! Ahora puedes añadir juegos a Google Calendar directamente desde el modal."
+            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white text-sm placeholder-gray-500 outline-none focus:border-purple-500 transition-colors resize-none h-24 mb-4"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={async () => {
+                const res = await fetch('/api/announcement', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: bannerMessage, active: true })
+                })
+                if (res.ok) setBannerSaved('✅ Banner activado')
+                else setBannerSaved('❌ Error al activar')
+              }}
+              disabled={!bannerMessage}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-xl text-sm font-bold transition-colors"
+            >
+              📢 Activar banner
+            </button>
+            <button
+              onClick={async () => {
+                const res = await fetch('/api/announcement', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: '', active: false })
+                })
+                if (res.ok) { setBannerSaved('✅ Banner desactivado'); setBannerMessage('') }
+              }}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm font-bold transition-colors"
+            >
+              🚫 Desactivar
+            </button>
+          </div>
+          {bannerSaved && <p className="text-sm mt-3 text-green-400">{bannerSaved}</p>}
+        </div>
       </div>
     </main>
   )

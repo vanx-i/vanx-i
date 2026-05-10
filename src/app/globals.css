@@ -138,3 +138,14 @@ body {
   padding: 4px 8px !important;
   font-size: 0.75rem !important;
 }
+
+/* Móvil: ocultar eventos y mostrar solo conteo */
+@media (max-width: 639px) {
+  .fc .fc-daygrid-event {
+    display: none !important;
+  }
+  
+  .fc .fc-daygrid-day-events {
+    display: none !important;
+  }
+}

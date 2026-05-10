@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin from '@fullcalendar/interaction'
 import { useUser } from '@clerk/nextjs'
 
 interface Game {
@@ -65,60 +66,70 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true)
   const [recentGames, setRecentGames] = useState<Game[]>([])
   const [showRecent, setShowRecent] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<{date: string, games: Game[]} | null>(null)
   const [search, setSearch] = useState('')
   const [next7Days, setNext7Days] = useState(false)
   const [onlyHype, setOnlyHype] = useState(false)
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [view, setView] = useState<'calendar' | 'list'>('list')
+  const [isMobile, setIsMobile] = useState(false)
   const { user } = useUser()
   const [interestedGames, setInterestedGames] = useState<number[]>([])
   const [hiddenGames, setHiddenGames] = useState<number[]>([])
   const [loadingInterest, setLoadingInterest] = useState(false)
+  const [showCalMenu, setShowCalMenu] = useState(false)
 
-useEffect(() => {
-  fetch('/api/user-games')
-    .then(res => res.json())
-    .then(data => setInterestedGames(data))
-}, [])
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
-const toggleInterest = async (gameId: number) => {
-  if (!user) return
-  setLoadingInterest(true)
-  try {
-    const res = await fetch('/api/user-games', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        gameId,
-        userEmail: user.primaryEmailAddress?.emailAddress,
-        userName: user.fullName || user.username
+  useEffect(() => {
+    fetch('/api/user-games')
+      .then(res => res.json())
+      .then(data => setInterestedGames(data))
+  }, [])
+
+  const toggleInterest = async (gameId: number) => {
+    if (!user) return
+    setLoadingInterest(true)
+    try {
+      const res = await fetch('/api/user-games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId,
+          userEmail: user.primaryEmailAddress?.emailAddress,
+          userName: user.fullName || user.username
+        })
       })
-    })
-    const data = await res.json()
-    if (data.status === 'added') {
-      setInterestedGames(prev => [...prev, gameId])
-    } else {
-      setInterestedGames(prev => prev.filter(id => id !== gameId))
+      const data = await res.json()
+      if (data.status === 'added') {
+        setInterestedGames(prev => [...prev, gameId])
+      } else {
+        setInterestedGames(prev => prev.filter(id => id !== gameId))
+      }
+    } finally {
+      setLoadingInterest(false)
     }
-  } finally {
-    setLoadingInterest(false)
   }
-}
 
-const hideGame = async (gameId: number) => {
-  if (!user) return
-  try {
-    await fetch('/api/user-games', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameId })
-    })
-    setHiddenGames(prev => [...prev, gameId])
-    setSelectedGame(null)
-  } catch (error) {
-    console.error(error)
+  const hideGame = async (gameId: number) => {
+    if (!user) return
+    try {
+      await fetch('/api/user-games', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId })
+      })
+      setHiddenGames(prev => [...prev, gameId])
+      setSelectedGame(null)
+    } catch (error) {
+      console.error(error)
+    }
   }
-}
 
   useEffect(() => {
     Promise.all([
@@ -168,12 +179,10 @@ const hideGame = async (gameId: number) => {
       in7Days.setDate(in7Days.getDate() + 7)
       return releaseDate >= today && releaseDate <= in7Days
     })
-
     .filter(game => {
       if (!onlyHype) return true
       return game.hypes > 0
     })
-
     .filter(game => {
       if (!onlyFavorites) return true
       return interestedGames.includes(game.id)
@@ -181,7 +190,7 @@ const hideGame = async (gameId: number) => {
 
   const events = [...filteredGames]
     .sort((a, b) => (b.interest_count || 0) - (a.interest_count || 0))
-    .map((game, index) => ({
+    .map((game) => ({
       id: String(game.id),
       title: game.name,
       date: game.release_date,
@@ -191,7 +200,6 @@ const hideGame = async (gameId: number) => {
       extendedProps: { game }
     }))
 
-  // Agrupar juegos por mes para vista lista
   const gamesByMonth = filteredGames.reduce((acc, game) => {
     const date = new Date(game.release_date)
     const key = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
@@ -218,7 +226,7 @@ const hideGame = async (gameId: number) => {
 
       <div className="max-w-6xl mx-auto px-4 pb-24">
 
-          {/* CONTROLES */}
+        {/* CONTROLES */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
 
           {/* Búsqueda */}
@@ -265,7 +273,7 @@ const hideGame = async (gameId: number) => {
             )}
           </div>
 
-            {/* Filtros categoría */}
+          {/* Filtros categoría */}
           <div className="flex flex-wrap gap-2 w-full mt-2">
             {CATEGORIES.map(category => (
               <button
@@ -327,7 +335,6 @@ const hideGame = async (gameId: number) => {
               🤍 Mis favoritos
             </button>
           </div>
-          
 
           {/* Toggle vista */}
           <div className="flex bg-gray-900 rounded-xl p-1 border border-gray-800">
@@ -358,17 +365,46 @@ const hideGame = async (gameId: number) => {
 
           /* VISTA CALENDARIO */
           <div className="bg-gray-900/50 backdrop-blur rounded-3xl p-4 border border-gray-800">
+            {isMobile && (
+              <div className="bg-purple-900/30 border border-purple-500/30 rounded-xl px-4 py-2 mb-3 text-purple-300 text-xs text-center">
+                💡 Pulsa sobre un día para ver los juegos que salen ese día
+              </div>
+            )}
             <FullCalendar
-              plugins={[dayGridPlugin]}
+              plugins={[dayGridPlugin, interactionPlugin]}
               initialView="dayGridMonth"
               events={events}
               locale="es"
               height="auto"
-              dayMaxEvents={3}
+              dayMaxEvents={isMobile ? false  : 3}
               displayEventTime={false}
+              firstDay={1}
               eventClick={(info) => setSelectedGame(info.event.extendedProps.game)}
+              dateClick={(info) => {
+                const dayGames = filteredGames.filter(g =>
+                  new Date(g.release_date).toLocaleDateString('en-CA') === info.dateStr
+                )
+                if (dayGames.length > 0) {
+                  setSelectedDay({ date: info.dateStr, games: dayGames })
+                }
+              }}
               eventClassNames="cursor-pointer rounded-lg"
             />
+            {isMobile && (
+            <div className="absolute inset-0 pointer-events-none">
+              {Object.entries(
+                filteredGames.reduce((acc, game) => {
+                  const date = new Date(game.release_date).toLocaleDateString('en-CA')
+                  acc[date] = (acc[date] || 0) + 1
+                  return acc
+                }, {} as Record<string, number>)
+              ).map(([date, count]) => (
+                <div key={date} data-date={date} className="game-count-badge" style={{display: 'none'}}>
+                  {count}
+                </div>
+              ))}
+            </div>
+          )}
           </div>
 
         ) : (
@@ -389,11 +425,7 @@ const hideGame = async (gameId: number) => {
                     >
                       <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-gray-900 border border-gray-800 group-hover:border-purple-500/50 transition-all group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-purple-500/20">
                         {game.cover_url ? (
-                          <img
-                            src={`https:${game.cover_url}`}
-                            alt={game.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={`https:${game.cover_url}`} alt={game.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-purple-900/50 to-cyan-900/50">
                             🎮
@@ -426,6 +458,7 @@ const hideGame = async (gameId: number) => {
             ))}
           </div>
         )}
+
         {/* YA SALIÓ */}
         {recentGames.length > 0 && (
           <div className="mt-16">
@@ -438,26 +471,15 @@ const hideGame = async (gameId: number) => {
               </h2>
               <span className="text-gray-500 text-sm">{showRecent ? '▲' : '▼'}</span>
             </button>
-
             {showRecent && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {recentGames.map(game => (
-                  <div
-                    key={game.id}
-                    onClick={() => setSelectedGame(game)}
-                    className="group cursor-pointer"
-                  >
+                  <div key={game.id} onClick={() => setSelectedGame(game)} className="group cursor-pointer">
                     <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-gray-900 border border-gray-800 group-hover:border-cyan-500/50 transition-all group-hover:scale-105">
                       {game.cover_url ? (
-                        <img
-                          src={`https:${game.cover_url}`}
-                          alt={game.name}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={`https:${game.cover_url}`} alt={game.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-cyan-900/50 to-purple-900/50">
-                          🎮
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-cyan-900/50 to-purple-900/50">🎮</div>
                       )}
                       <div className="absolute top-2 left-2 bg-cyan-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                         YA SALIÓ
@@ -477,11 +499,56 @@ const hideGame = async (gameId: number) => {
         )}
       </div>
 
-      {/* MODAL */}
+      {/* MODAL DÍA */}
+      {selectedDay && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedDay(null)}
+        >
+          <div
+            className="bg-gray-900 border border-gray-700 rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-white">
+                📅 {new Date(selectedDay.date).toLocaleDateString('es-ES', {
+                  weekday: 'long', day: 'numeric', month: 'long'
+                })}
+              </h3>
+              <button onClick={() => setSelectedDay(null)} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-3">
+              {selectedDay.games.map(game => (
+                <div
+                  key={game.id}
+                  onClick={() => { setSelectedDay(null); setSelectedGame(game) }}
+                  className="flex gap-3 items-center p-3 bg-gray-800 hover:bg-gray-700 rounded-xl cursor-pointer transition-colors"
+                >
+                  {game.cover_url ? (
+                    <img src={`https:${game.cover_url}`} alt={game.name} className="w-10 h-14 object-cover rounded-lg flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-14 bg-purple-900/50 rounded-lg flex items-center justify-center text-xl flex-shrink-0">🎮</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-bold truncate">{game.name}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{game.category}</p>
+                    {game.interest_count > 0 && (
+                      <p className="text-purple-300 text-xs mt-0.5">💜 {game.interest_count}</p>
+                    )}
+                  </div>
+                  {game.hypes > 5 && <span className="text-orange-400">🔥</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL JUEGO */}
       {selectedGame && (
         <div
           className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedGame(null)}
+          onClick={() => { setSelectedGame(null); setShowCalMenu(false) }}
         >
           <div
             className="bg-gray-900 border border-gray-700 rounded-3xl p-6 w-full max-w-md sm:max-w-xl md:max-w-2xl shadow-2xl"
@@ -489,15 +556,9 @@ const hideGame = async (gameId: number) => {
           >
             <div className="flex gap-6 mb-4">
               {selectedGame.cover_url ? (
-                <img
-                  src={`https:${selectedGame.cover_url}`}
-                  alt={selectedGame.name}
-                  className="w-32 h-44 md:w-40 md:h-56 object-cover rounded-xl flex-shrink-0"
-                />
+                <img src={`https:${selectedGame.cover_url}`} alt={selectedGame.name} className="w-32 h-44 md:w-40 md:h-56 object-cover rounded-xl flex-shrink-0" />
               ) : (
-                <div className="w-24 h-32 bg-gradient-to-br from-purple-900/50 to-cyan-900/50 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
-                  🎮
-                </div>
+                <div className="w-24 h-32 bg-gradient-to-br from-purple-900/50 to-cyan-900/50 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">🎮</div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-2 mb-2">
@@ -511,11 +572,10 @@ const hideGame = async (gameId: number) => {
                   })}
                 </p>
                 {selectedGame.interest_count > 0 && (
-                <p className="text-purple-300 text-sm mt-1 font-medium">💜 {selectedGame.interest_count} {selectedGame.interest_count === 1 ? 'persona espera' : 'personas esperan'} este juego</p>
-              )}
+                  <p className="text-purple-300 text-sm mt-1 font-medium">💜 {selectedGame.interest_count} {selectedGame.interest_count === 1 ? 'persona espera' : 'personas esperan'} este juego</p>
+                )}
               </div>
             </div>
-
             <div className="flex flex-wrap gap-1 mb-4">
               {selectedGame.platforms?.map(p => (
                 <span key={p} className={`px-2 py-0.5 rounded-full text-xs font-medium ${platformColors[p] || 'bg-gray-800 text-gray-300'}`}>
@@ -523,14 +583,12 @@ const hideGame = async (gameId: number) => {
                 </span>
               ))}
             </div>
-
             {selectedGame.summary && (
               <p className="text-gray-300 text-sm leading-relaxed line-clamp-4 mb-4">
                 {selectedGame.summary}
               </p>
             )}
-
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2">
               {user ? (
                 <>
                   <button
@@ -552,29 +610,56 @@ const hideGame = async (gameId: number) => {
                     👎
                   </button>
                   <button
-                onClick={() => {
-                  const url = `https://vanx-i.app/game/${selectedGame.id}`
-                  const text = `🎮 ¡Echa un ojo a este juego!\n${selectedGame.name} · Sale el ${new Date(selectedGame.release_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}\n👉 ${url}`
-                  navigator.clipboard.writeText(text)
-                  alert('¡Copiado al portapapeles!')
-                }}
-                className="px-4 py-2.5 bg-gray-800 hover:bg-cyan-600 hover:text-white rounded-xl transition-all text-sm font-medium text-gray-400"
-                title="Compartir"
-              >
-                🔗
-              </button>
+                    onClick={() => {
+                      const url = `https://vanx-i.app/game/${selectedGame.id}`
+                      const text = `🎮 ¡Echa un ojo a este juego!\n${selectedGame.name} · Sale el ${new Date(selectedGame.release_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}\n👉 ${url}`
+                      navigator.clipboard.writeText(text)
+                      alert('¡Copiado al portapapeles!')
+                    }}
+                    className="px-4 py-2.5 bg-gray-800 hover:bg-cyan-600 hover:text-white rounded-xl transition-all text-sm font-medium text-gray-400"
+                    title="Compartir"
+                  >
+                    🔗
+                  </button>
                 </>
               ) : (
                 <div className="flex-1 py-2.5 rounded-xl bg-gray-800/50 text-gray-500 text-sm text-center">
                   Inicia sesión para marcar favoritos
                 </div>
               )}
-              <button
-                onClick={() => setSelectedGame(null)}
-                className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors text-sm font-medium"
-              >
-                Cerrar
-              </button>
+             <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowCalMenu(!showCalMenu) }}
+                  className="px-3 py-2.5 h-full bg-gray-800 hover:bg-blue-600 hover:text-white rounded-xl transition-all text-sm font-medium text-gray-400"
+                  title="Añadir al calendario"
+                >
+                  📅
+                </button>
+                {showCalMenu && (
+                  <div className="absolute bottom-full pb-2 right-0 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden shadow-xl w-44 z-10">
+                    
+                    <a  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=🎮+${encodeURIComponent(selectedGame.name)}&dates=${new Date(selectedGame.release_date).toLocaleDateString('en-CA').replace(/-/g, '')}/${new Date(selectedGame.release_date).toLocaleDateString('en-CA').replace(/-/g, '')}&details=${encodeURIComponent(`Lanzamiento de ${selectedGame.name}. Más info en https://vanx-i.app/game/${selectedGame.id}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-700 text-white text-sm transition-colors"
+                    >
+                      <span>📅</span> Google Calendar
+                    </a>
+                    
+                    <a  href={`/api/games/ics?id=${selectedGame.id}`}
+                      className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-700 text-white text-sm transition-colors"
+                    >
+                      <span>🍎</span> Apple Calendar
+                    </a>
+                  </div>
+                )}
+              </div>
+            <button
+              onClick={() => { setSelectedGame(null); setShowCalMenu(false) }}
+              className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors text-sm font-medium mt-2"
+            >
+              Cerrar
+            </button>
             </div>
           </div>
         </div>

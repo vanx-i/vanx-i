@@ -12,6 +12,7 @@
     "@clerk/nextjs": "^7.3.2",
     "@fullcalendar/core": "^6.1.20",
     "@fullcalendar/daygrid": "^6.1.20",
+    "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
     "@neondatabase/serverless": "^1.1.0",
     "@netlify/plugin-nextjs": "^5.15.11",
