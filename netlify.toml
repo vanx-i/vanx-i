@@ -8,16 +8,6 @@
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
 
-[[scheduled-functions]]
-  name = "notify-releases"
-  schedule = "0 7 * * *"
-  path = "/api/notify-releases"
-
-[[scheduled-functions]]
-  name = "sync-games"
-  schedule = "0 1 * * *"
-  path = "/api/sync-games"
-
 [[headers]]
 for = "/*"
 [headers.values]
